@@ -1,0 +1,8 @@
+prefix=/home/stephanie/catkin_ws/devel
+
+Name: ballrobo
+Description: Description of ballrobo
+Version: 0.0.0
+Cflags: 
+Libs: -L/home/stephanie/catkin_ws/devel/lib 
+Requires: 
