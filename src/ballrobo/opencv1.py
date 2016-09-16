@@ -15,6 +15,7 @@ def imagecb(data):
     try: #if no image, then throw out error but continue
         img_original = bridge.imgmsg_to_cv2(data, "bgr8")
 
+
 #COLOR TRACKING
         #Converts bgr8 to hsv
         hsv = cv2.cvtColor(img_original, cv2.COLOR_BGR2HSV)
@@ -25,6 +26,8 @@ def imagecb(data):
 
         #Def mask using set hsv range
         mask = cv2.inRange(hsv, lower_red, upper_red)
+        mask = cv2.erode(mask,None,iterations=5)
+        mask = cv2.dilate(mask,None,iterations=5)
 
         #Mask and original image overlay
         res = cv2.bitwise_and(img_original,img_original, mask= mask)
@@ -32,24 +35,27 @@ def imagecb(data):
         #Creating b w image from res  (outputs binary matrices)
         ret, thresh = cv2.threshold(res[:,:,2], 100, 255, cv2.THRESH_BINARY)
 
-#OUTLINE RECOGNITION of RED OBJ
-        #Finding ball contour
-        contours, hierarchy = cv2.findContours(thresh, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
 
-        #Draw ball outline
-        cv2.drawContours(thresh, contours, -1, (128,255,0), 3)
+        #Find and creat the circle
+        cnts = cv2.findContours(mask.copy(),cv2.RETR_EXTERNAL,cv2.CHAIN_APPROX_SIMPLE)[-2]
+        center = None
 
-#FINDING CENTER OF RED OBJ
-        cnts = contours[0]
-        (x,y), radius = cv2.minEnclosingCircle(cnts)
-        center = (int(x), int(y))
-        radius = int(radius)
-        cv2.circle(thresh, center, radius, (255,255,255), 2)
+        if len(cnts) > 0:
+            c=max(cnts,key=cv2.contourArea)
+            ((x,y),radius) = cv2.minEnclosingCircle(c)
+            M = cv2.moments(c)
+            center = (int(M["m10"] / M["m00"]), int(M["m01"] / M["m00"]))
+
+            if radius > 10:
+                cv2.circle(img_original,(int(x), int(y)), int(radius), (0,255,255),2)
+                cv2.circle(img_original,center,5,(0,0,255),-1)
+            
 
 #DISPLAY WHAT CAMERA IS PUBLISHING TO opencv2
         cv2.imshow("colorout", res)
         cv2.imshow("contout", thresh)
-        cv2.waitKey(500) #Updates with next cached img every 0.5sec
+        cv2.imshow("original",img_original)
+        cv2.waitKey(20) #Updates with next cached img every 0.01sec
 
     except CvBridgeError, e:
         print("==[CAMERA MANAGER]==", e)
@@ -64,3 +70,6 @@ def listener():
 
 if __name__ == '__main__':
     listener()
+
+
+
